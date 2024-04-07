@@ -49,9 +49,6 @@ async def main():
         await send_meet_poll(bot, table)
         await kick_inactive_users(bot, table)
 
-    # Close the event loop
-    loop.close()
-
 
 # Evaluate the latest poll
 def evaluate_poll(bot, table, updates):
