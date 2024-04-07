@@ -10,9 +10,9 @@ CHAT_ID = os.getenv("CHAT_ID")
 PLAY_ALLOWED_DAYS = os.getenv("PLAY_ALLOWED_DAYS").split(',')
 MIN_PLAYERS_FOR_MEETUP = int(os.getenv("MIN_PLAYERS_FOR_MEETUP"))
 LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
-AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION_CP = os.getenv("AWS_REGION")
+AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID_CP")
+AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")
+AWS_REGION_CP = os.getenv("AWS_REGION_CP")
 
 
 async def main():
@@ -60,6 +60,7 @@ def evaluate_poll(bot, table, updates):
             'cp_id': 'latest_polls'
             }
         )
+
     latest_polls = response['Item']['polls']
 
     # Get the ID of the latest poll
@@ -242,6 +243,5 @@ def lambda_handler(event, context):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     return {
-        'statusCode': 200,
-        'body': 'OK'
+        'statusCode': 200, 'body': 'OK'
         }
