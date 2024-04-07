@@ -10,11 +10,21 @@ CHAT_ID = os.getenv("CHAT_ID")
 PLAY_ALLOWED_DAYS = os.getenv("PLAY_ALLOWED_DAYS").split(',')
 MIN_PLAYERS_FOR_MEETUP = int(os.getenv("MIN_PLAYERS_FOR_MEETUP"))
 LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
+AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION_CP = os.getenv("AWS_REGION")
 
 
 async def main():
     # Initialize the DynamoDB client
-    dynamodb = boto3.resource('dynamodb')
+    session = boto3.Session(
+        aws_access_key_id=AWS_ACCESS_KEY_ID_CP,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CP,
+        region_name=AWS_REGION_CP
+        )
+
+    # Now you can use this session to create service clients or resources
+    dynamodb = session.resource('dynamodb')
 
     # Get a reference to the 'cappello-parlante' table
     table = dynamodb.Table('cappello-parlante')
@@ -224,8 +234,10 @@ def add_new_users_to_table(updates, table):
         )
 
 
-# Create an event loop
-loop = asyncio.get_event_loop()
-
-# Run the main function
-loop.run_until_complete(main())
+def lambda_handler(event, context):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    return {
+        'statusCode': 200,
+        'body': 'OK'
+        }
