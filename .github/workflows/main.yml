@@ -3,7 +3,7 @@ name: Deploy to AWS Lambda
 on:
   push:
     branches:
-      - master 
+      - master
 
 jobs:
   deploy:
@@ -31,8 +31,7 @@ jobs:
         aws-region: eu-central-1
 
     - name: Deploy to AWS Lambda
-      uses: aws-actions/aws-cli@v1
-      with:
-        script: |
-          zip function.zip lambda_function.py
-          aws lambda update-function-code --function-name cappello-parlante --zip-file fileb://function.zip
+      run: |
+        pip install awscli
+        zip function.zip lambda_function.py
+        aws lambda update-function-code --function-name cappello-parlante --zip-file fileb://function.zip
