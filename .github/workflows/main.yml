@@ -31,8 +31,12 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CP }}
         aws-region: eu-central-1
 
+
+    - name: Prepare deployment package
+      run: |
+        zip -r function.zip .  # Include all files in the current directory
+
     - name: Deploy to AWS Lambda
       run: |
         pip install awscli
-        zip function.zip lambda_function.py
         aws lambda update-function-code --function-name cappello-parlante --zip-file fileb://function.zip
