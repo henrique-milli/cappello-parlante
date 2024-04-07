@@ -16,6 +16,7 @@ AWS_REGION_CP = os.getenv("AWS_REGION")
 
 
 async def main():
+    print("Starting the main function")
     # Initialize the DynamoDB client
     session = boto3.Session(
         aws_access_key_id=AWS_ACCESS_KEY_ID_CP,
@@ -52,6 +53,7 @@ async def main():
 
 # Evaluate the latest poll
 def evaluate_poll(bot, table, updates):
+    print("Evaluating the latest poll")
     # Get the latest polls from the table
     response = table.get_item(
         Key={
@@ -109,6 +111,7 @@ def evaluate_poll(bot, table, updates):
 
 # Poll asking users to vote which days they want to meet up
 async def send_meet_poll(bot, table):
+    print("Sending the meet poll")
     pool_message = await bot.send_poll(
         chat_id=CHAT_ID,
         question="Questa settimana quando giochiamo?",
@@ -162,6 +165,7 @@ async def send_meet_poll(bot, table):
 
 # Kick users who haven't been seen in the last 1000 updates
 async def kick_inactive_users(bot, table):
+    print("Kicking inactive users")
     # Get the users from the table
     response = table.get_item(
         Key={
@@ -209,6 +213,7 @@ async def kick_inactive_users(bot, table):
 
 
 def add_new_users_to_table(updates, table):
+    print("Adding new users to the table")
     # Get the users from the table
     response = table.get_item(
         Key={
@@ -232,6 +237,8 @@ def add_new_users_to_table(updates, table):
 
 
 def lambda_handler(event, context):
+    print("Starting the lambda function")
+    print(AWS_REGION_CP)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     return {
