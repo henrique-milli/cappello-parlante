@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: cappello-parlante-environment
 
     steps:
     - name: Checkout code
