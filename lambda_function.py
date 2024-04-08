@@ -211,18 +211,7 @@ def send_meet_poll(table):
 # Kick users who haven't been seen in the last 1000 updates
 async def kick_inactive_users(table):
     print("Kicking inactive users")
-    try:
-        # Get the users from the table
-        response = table.get_item(
-            Key={
-                'cp_id': 'users'
-                }
-            )
-    except Exception as e:
-        print(f"Failed while getting users from the table {e}")
-        return
 
-    users = response['Item']['users']
     try:
         # get the voters from the latest polls
         response = table.get_item(
@@ -257,7 +246,7 @@ async def kick_inactive_users(table):
     # Kick users who haven't voted in the latest polls
     for user in users:
         if user not in voters:
-            kick_chat_member(user)
+            kick_chat_member(user.id)
             users.remove(user)
     try:
         # Delete the users in the table
@@ -271,7 +260,10 @@ async def kick_inactive_users(table):
         return
 
 
-def add_new_users_to_table(updates, table):
+from typing import List, Dict, Any
+
+
+def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
     print("Adding new users to the table")
     try:
         # Get the users from the table
@@ -288,8 +280,8 @@ def add_new_users_to_table(updates, table):
 
     # Add new users to the table
     for update in updates:
-        if update.message.from_user.id not in users:
-            users.append(update.message.from_user.id)
+        if update['message']['from']['id'] not in users:
+            users.append(update['message']['from']['id'])
     try:
         # Update the users in the table
         table.put_item(
@@ -302,7 +294,10 @@ def add_new_users_to_table(updates, table):
         return
 
 
-def get_updates():
+from typing import List, Dict, Any
+
+
+def get_updates() -> List[Dict[str, Any]]:
     print("Getting updates")
     try:
         response = requests.get(
@@ -311,7 +306,7 @@ def get_updates():
         updates = response.json()['result']
     except Exception as e:
         print(f"Failed while getting updates {e}")
-        return
+        return []
 
     return updates
 
