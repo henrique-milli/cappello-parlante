@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from typing import List, Dict, Any
 
 import boto3
 import requests
@@ -94,7 +95,7 @@ def evaluate_poll(table, updates):
 
     # Find the latest poll in the updates
     for update in reversed(updates):
-        if update.poll and update.poll.id == latest_poll_id:
+        if update['poll'] and update['poll']['id'] == latest_poll_id:
             latest_poll = update.poll
             break
     else:
@@ -209,7 +210,7 @@ def send_meet_poll(table):
 
 
 # Kick users who haven't been seen in the last 1000 updates
-async def kick_inactive_users(table):
+def kick_inactive_users(table):
     print("Kicking inactive users")
 
     try:
@@ -246,7 +247,7 @@ async def kick_inactive_users(table):
     # Kick users who haven't voted in the latest polls
     for user in users:
         if user not in voters:
-            kick_chat_member(user.id)
+            kick_chat_member(user['id'])
             users.remove(user)
     try:
         # Delete the users in the table
@@ -259,8 +260,6 @@ async def kick_inactive_users(table):
         print(f"Failed while updating users in the table {e}")
         return
 
-
-from typing import List, Dict, Any
 
 
 def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
@@ -292,9 +291,6 @@ def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
     except Exception as e:
         print(f"Failed while updating users in the table {e}")
         return
-
-
-from typing import List, Dict, Any
 
 
 def get_updates() -> List[Dict[str, Any]]:
