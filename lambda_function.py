@@ -1,9 +1,9 @@
-import asyncio
 import datetime
+import json
 import os
 
 import boto3
-from telegram import Bot
+import requests
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -13,9 +13,18 @@ LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
 AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID_CP")
 AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")
 AWS_REGION_CP = os.getenv("AWS_REGION_CP")
+BOT_BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 
-async def main():
+def lambda_handler(event, context):
+    print("Starting the lambda function")
+    main()
+    return {
+        'statusCode': 200, 'body': 'OK'
+        }
+
+
+def main():
     print("Starting the main function")
 
     try:
@@ -35,15 +44,8 @@ async def main():
         return
 
     try:
-        # Initialize the bot
-        bot = Bot(token=BOT_TOKEN)
-    except Exception as e:
-        print(f"Failed while initializing bot {e}")
-        return
-
-    try:
         # Get the updates
-        updates = bot.get_updates()
+        updates = get_updates()
     except Exception as e:
         print(f"Failed while getting updates {e}")
         return
@@ -60,7 +62,7 @@ async def main():
     try:
         # Evaluate the latest poll if it's thursday
         if today == 3:
-            evaluate_poll(bot, table, updates)
+            evaluate_poll(table, updates)
     except Exception as e:
         print(f"Failed while evaluating the latest poll {e}")
         return
@@ -68,15 +70,15 @@ async def main():
     try:
         # Send a new poll if it's monday
         if today == 0:
-            await send_meet_poll(bot, table)
-            await kick_inactive_users(bot, table)
+            send_meet_poll(table)
+            kick_inactive_users(table)
     except Exception as e:
         print(f"Failed while sending the meet poll {e}")
         return
 
 
 # Evaluate the latest poll
-def evaluate_poll(bot, table, updates):
+def evaluate_poll(table, updates):
     print("Evaluating the latest poll")
     # Get the latest polls from the table
     response = table.get_item(
@@ -107,8 +109,7 @@ def evaluate_poll(bot, table, updates):
     # send a message with the selected options
     for i, option in enumerate(poll_options):
         if poll_results[i].voter_count >= MIN_PLAYERS_FOR_MEETUP:
-            bot.send_message(
-                chat_id=CHAT_ID,
+            send_message(
                 text=f"Questa settimana si gioca il '{option}' con {poll_results[i].voter_count} amici."
                 )
 
@@ -135,15 +136,21 @@ def evaluate_poll(bot, table, updates):
 
 
 # Poll asking users to vote which days they want to meet up
-async def send_meet_poll(bot, table):
+def send_meet_poll(table):
     print("Sending the meet poll")
     try:
-        pool_message = await bot.send_poll(
-            chat_id=CHAT_ID,
-            question="Questa settimana quando giochiamo?",
-            options=PLAY_ALLOWED_DAYS,
-            is_anonymous=False,
-            allows_multiple_answers=True, )
+        response = requests.post(
+            f"{BOT_BASE_URL}/sendPoll", data=json.dumps(
+                {
+                    "chat_id": CHAT_ID,
+                    "question": "Questa settimana quando giochiamo?",
+                    "options": json.dumps(PLAY_ALLOWED_DAYS),
+                    "is_anonymous": False,
+                    "allows_multiple_answers": True
+                    }
+                ), headers={'Content-Type': 'application/json'}
+            )
+        pool_message = response.json()
     except Exception as e:
         print(f"Failed while sending the meet poll {e}")
         return
@@ -202,7 +209,7 @@ async def send_meet_poll(bot, table):
 
 
 # Kick users who haven't been seen in the last 1000 updates
-async def kick_inactive_users(bot, table):
+async def kick_inactive_users(table):
     print("Kicking inactive users")
     try:
         # Get the users from the table
@@ -250,7 +257,7 @@ async def kick_inactive_users(bot, table):
     # Kick users who haven't voted in the latest polls
     for user in users:
         if user not in voters:
-            bot.kick_chat_member(chat_id=CHAT_ID, user_id=user)
+            kick_chat_member(user)
             users.remove(user)
     try:
         # Delete the users in the table
@@ -295,11 +302,45 @@ def add_new_users_to_table(updates, table):
         return
 
 
-def lambda_handler(event, context):
-    print("Starting the lambda function")
-    print(AWS_REGION_CP)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    return {
-        'statusCode': 200, 'body': 'OK'
-        }
+def get_updates():
+    print("Getting updates")
+    try:
+        response = requests.get(
+            f"{BOT_BASE_URL}/getUpdates", params={'offset': -1}
+            )
+        updates = response.json()['result']
+    except Exception as e:
+        print(f"Failed while getting updates {e}")
+        return
+
+    return updates
+
+
+def send_message(text):
+    print("Sending message")
+    try:
+        response = requests.post(
+            f"{BOT_BASE_URL}/sendMessage", data=json.dumps(
+                {
+                    "chat_id": CHAT_ID, "text": text
+                    }
+                ), headers={'Content-Type': 'application/json'}
+            )
+    except Exception as e:
+        print(f"Failed while sending message {e}")
+        return
+
+
+def kick_chat_member(user_id):
+    print("Kicking chat member")
+    try:
+        response = requests.post(
+            f"{BOT_BASE_URL}/kickChatMember", data=json.dumps(
+                {
+                    "chat_id": CHAT_ID, "user_id": user_id
+                    }
+                ), headers={'Content-Type': 'application/json'}
+            )
+    except Exception as e:
+        print(f"Failed while kicking chat member {e}")
+        return
