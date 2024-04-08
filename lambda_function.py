@@ -17,38 +17,62 @@ AWS_REGION_CP = os.getenv("AWS_REGION_CP")
 
 async def main():
     print("Starting the main function")
-    # Initialize the DynamoDB client
-    session = boto3.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID_CP,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CP,
-        region_name=AWS_REGION_CP
-        )
 
-    # Now you can use this session to create service clients or resources
-    dynamodb = session.resource('dynamodb')
+    try:
+        # Initialize the DynamoDB client
+        session = boto3.Session(
+            aws_access_key_id=AWS_ACCESS_KEY_ID_CP,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CP,
+            region_name=AWS_REGION_CP
+            )
+        # Now you can use this session to create service clients or resources
+        dynamodb = session.resource('dynamodb')
 
-    # Get a reference to the 'cappello-parlante' table
-    table = dynamodb.Table('cappello-parlante')
+        # Get a reference to the 'cappello-parlante' table
+        table = dynamodb.Table('cappello-parlante')
+    except Exception as e:
+        print(f"Failed while initializing db {e}")
+        return
 
-    # Initialize the bot
-    bot = Bot(token=BOT_TOKEN)
+    try:
+        # Initialize the bot
+        bot = Bot(token=BOT_TOKEN)
+    except Exception as e:
+        print(f"Failed while initializing bot {e}")
+        return
 
-    # Get the updates
-    updates = bot.get_updates()
+    try:
+        # Get the updates
+        updates = bot.get_updates()
+    except Exception as e:
+        print(f"Failed while getting updates {e}")
+        return
 
-    # Add new users to the table
-    add_new_users_to_table(updates, table)
+    try:
+        # Add new users to the table
+        add_new_users_to_table(updates, table)
+    except Exception as e:
+        print(f"Failed while adding new users to the table {e}")
+        return
 
     today = datetime.datetime.today().weekday()
 
-    # Evaluate the latest poll if it's thursday
-    if today == 3:
-        evaluate_poll(bot, table, updates)
+    try:
+        # Evaluate the latest poll if it's thursday
+        if today == 3:
+            evaluate_poll(bot, table, updates)
+    except Exception as e:
+        print(f"Failed while evaluating the latest poll {e}")
+        return
 
-    # Send a new poll if it's monday
-    if today == 0:
-        await send_meet_poll(bot, table)
-        await kick_inactive_users(bot, table)
+    try:
+        # Send a new poll if it's monday
+        if today == 0:
+            await send_meet_poll(bot, table)
+            await kick_inactive_users(bot, table)
+    except Exception as e:
+        print(f"Failed while sending the meet poll {e}")
+        return
 
 
 # Evaluate the latest poll
