@@ -137,12 +137,16 @@ def evaluate_poll(bot, table, updates):
 # Poll asking users to vote which days they want to meet up
 async def send_meet_poll(bot, table):
     print("Sending the meet poll")
-    pool_message = await bot.send_poll(
-        chat_id=CHAT_ID,
-        question="Questa settimana quando giochiamo?",
-        options=PLAY_ALLOWED_DAYS,
-        is_anonymous=False,
-        allows_multiple_answers=True, )
+    try:
+        pool_message = await bot.send_poll(
+            chat_id=CHAT_ID,
+            question="Questa settimana quando giochiamo?",
+            options=PLAY_ALLOWED_DAYS,
+            is_anonymous=False,
+            allows_multiple_answers=True, )
+    except Exception as e:
+        print(f"Failed while sending the meet poll {e}")
+        return
 
     # Get the poll ID
     poll_id = pool_message.poll.id
@@ -151,13 +155,16 @@ async def send_meet_poll(bot, table):
     poll = {
         'id': poll_id, 'voters': []
         }
-
-    # Get the latest polls from the table
-    response = table.get_item(
-        Key={
-            'cp_id': 'latest_polls'
-            }
-        )
+    try:
+        # Get the latest polls from the table
+        response = table.get_item(
+            Key={
+                'cp_id': 'latest_polls'
+                }
+            )
+    except Exception as e:
+        print(f"Failed while getting latest polls from the table {e}")
+        return
 
     latest_polls = response['Item']['polls']
 
@@ -169,43 +176,56 @@ async def send_meet_poll(bot, table):
                 'cp_id': oldest_poll['id']
                 }
             )
-
-    # Store the poll object in the table
-    table.put_item(
-        Item={
-            'cp_id': poll_id, 'poll': poll
-            }
-        )
+    try:
+        # Store the poll object in the table
+        table.put_item(
+            Item={
+                'cp_id': poll_id, 'poll': poll
+                }
+            )
+    except Exception as e:
+        print(f"Failed while storing the poll object in the table {e}")
+        return
 
     # Add the new poll to the latest polls
     latest_polls.append(poll)
-
-    # Update the latest polls in the table
-    table.put_item(
-        Item={
-            'cp_id': 'latest_polls', 'polls': latest_polls
-            }
-        )
+    try:
+        # Update the latest polls in the table
+        table.put_item(
+            Item={
+                'cp_id': 'latest_polls', 'polls': latest_polls
+                }
+            )
+    except Exception as e:
+        print(f"Failed while updating latest polls in the table {e}")
+        return
 
 
 # Kick users who haven't been seen in the last 1000 updates
 async def kick_inactive_users(bot, table):
     print("Kicking inactive users")
-    # Get the users from the table
-    response = table.get_item(
-        Key={
-            'cp_id': 'users'
-            }
-        )
+    try:
+        # Get the users from the table
+        response = table.get_item(
+            Key={
+                'cp_id': 'users'
+                }
+            )
+    except Exception as e:
+        print(f"Failed while getting users from the table {e}")
+        return
 
     users = response['Item']['users']
-
-    # get the voters from the latest polls
-    response = table.get_item(
-        Key={
-            'cp_id': 'latest_polls'
-            }
-        )
+    try:
+        # get the voters from the latest polls
+        response = table.get_item(
+            Key={
+                'cp_id': 'latest_polls'
+                }
+            )
+    except Exception as e:
+        print(f"Failed while getting latest polls from the table {e}")
+        return
 
     latest_polls = response['Item']['polls']
 
@@ -215,11 +235,15 @@ async def kick_inactive_users(bot, table):
         voters += poll['voters']
 
     # Get the users from the table
-    response = table.get_item(
-        Key={
-            'cp_id': 'users'
-            }
-        )
+    try:
+        response = table.get_item(
+            Key={
+                'cp_id': 'users'
+                }
+            )
+    except Exception as e:
+        print(f"Failed while getting users from the table {e}")
+        return
 
     users = response['Item']['users']
 
@@ -228,23 +252,30 @@ async def kick_inactive_users(bot, table):
         if user not in voters:
             bot.kick_chat_member(chat_id=CHAT_ID, user_id=user)
             users.remove(user)
-
-    # Delete the users in the table
-    table.put_item(
-        Item={
-            'cp_id': 'users', 'users': users
-            }
-        )
+    try:
+        # Delete the users in the table
+        table.put_item(
+            Item={
+                'cp_id': 'users', 'users': users
+                }
+            )
+    except Exception as e:
+        print(f"Failed while updating users in the table {e}")
+        return
 
 
 def add_new_users_to_table(updates, table):
     print("Adding new users to the table")
-    # Get the users from the table
-    response = table.get_item(
-        Key={
-            'cp_id': 'users'
-            }
-        )
+    try:
+        # Get the users from the table
+        response = table.get_item(
+            Key={
+                'cp_id': 'users'
+                }
+            )
+    except Exception as e:
+        print(f"Failed while getting users from the table {e}")
+        return
 
     users = response['Item']['users']
 
@@ -252,13 +283,16 @@ def add_new_users_to_table(updates, table):
     for update in updates:
         if update.message.from_user.id not in users:
             users.append(update.message.from_user.id)
-
-    # Update the users in the table
-    table.put_item(
-        Item={
-            'cp_id': 'users', 'users': users
-            }
-        )
+    try:
+        # Update the users in the table
+        table.put_item(
+            Item={
+                'cp_id': 'users', 'users': users
+                }
+            )
+    except Exception as e:
+        print(f"Failed while updating users in the table {e}")
+        return
 
 
 def lambda_handler(event, context):
