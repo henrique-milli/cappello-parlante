@@ -11,8 +11,6 @@ CHAT_ID = os.getenv("CHAT_ID")
 PLAY_ALLOWED_DAYS = os.getenv("PLAY_ALLOWED_DAYS").split(',')
 MIN_PLAYERS_FOR_MEETUP = int(os.getenv("MIN_PLAYERS_FOR_MEETUP"))
 LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
-AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID_CP")
-AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")
 AWS_REGION_CP = os.getenv("AWS_REGION_CP")
 BOT_BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -31,8 +29,6 @@ def main():
     try:
         # Initialize the DynamoDB client
         session = boto3.Session(
-            aws_access_key_id=AWS_ACCESS_KEY_ID_CP,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CP,
             region_name=AWS_REGION_CP
             )
         # Now you can use this session to create service clients or resources
@@ -335,3 +331,4 @@ def kick_chat_member(user_id):
     except Exception as e:
         print(f"Failed while kicking chat member {e}")
         return
+
