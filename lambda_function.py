@@ -30,9 +30,6 @@ def main():
         # Initialize the DynamoDB client
         db = boto3.client('dynamodb', region_name=AWS_REGION_CP)
 
-        # Get a reference to the 'cappello-parlante' table
-        table = db.Table('cappello-parlante')
-
     except Exception as e:
         print(f"Failed while initializing db {e}")
         return
@@ -46,7 +43,7 @@ def main():
 
     try:
         # Add new users to the table
-        add_new_users_to_table(updates, table)
+        add_new_users_to_table(updates, db)
     except Exception as e:
         print(f"Failed while adding new users to the table {e}")
         return
@@ -56,7 +53,7 @@ def main():
     try:
         # Evaluate the latest poll if it's thursday
         if today == 3:
-            evaluate_poll(table, updates)
+            evaluate_poll(db, updates)
     except Exception as e:
         print(f"Failed while evaluating the latest poll {e}")
         return
@@ -64,19 +61,19 @@ def main():
     try:
         # Send a new poll if it's monday
         if today == 0:
-            send_meet_poll(table)
-            kick_inactive_users(table)
+            send_meet_poll(db)
+            kick_inactive_users(db)
     except Exception as e:
         print(f"Failed while sending the meet poll {e}")
         return
 
 
 # Evaluate the latest poll
-def evaluate_poll(table, updates):
+def evaluate_poll(db, updates):
     print("Evaluating the latest poll")
     # Get the latest polls from the table
-    response = table.get_item(
-        Key={
+    response = db.get_item(
+        TableName='cappello-parlante', Key={
             'cp_id': 'latest_polls'
             }
         )
@@ -108,8 +105,8 @@ def evaluate_poll(table, updates):
                 )
 
     # Get the poll object from the table
-    response = table.get_item(
-        Key={
+    response = db.get_item(
+        TableName='cappello-parlante', Key={
             'cp_id': latest_poll_id
             }
         )
@@ -122,15 +119,15 @@ def evaluate_poll(table, updates):
                 poll['voters'].append(user.id)
 
     # Store the updated poll object in the table
-    table.put_item(
-        Item={
+    db.put_item(
+        TableName='cappello-parlante', Item={
             'cp_id': latest_poll_id, 'poll': poll
             }
         )
 
 
 # Poll asking users to vote which days they want to meet up
-def send_meet_poll(table):
+def send_meet_poll(db):
     print("Sending the meet poll")
     try:
         response = requests.post(
@@ -158,8 +155,8 @@ def send_meet_poll(table):
         }
     try:
         # Get the latest polls from the table
-        response = table.get_item(
-            Key={
+        response = db.get_item(
+            TableName='cappello-parlante', Key={
                 'cp_id': 'latest_polls'
                 }
             )
@@ -172,15 +169,15 @@ def send_meet_poll(table):
     # If the number of stored polls is equal to MAX_LATEST_POLL, delete the oldest poll
     if len(latest_polls) >= LATEST_POLLS_SIZE:
         oldest_poll = latest_polls.pop(0)
-        table.delete_item(
-            Key={
+        db.delete_item(
+            TableName='cappello-parlante', Key={
                 'cp_id': oldest_poll['id']
                 }
             )
     try:
         # Store the poll object in the table
-        table.put_item(
-            Item={
+        db.put_item(
+            TableName='cappello-parlante', Item={
                 'cp_id': poll_id, 'poll': poll
                 }
             )
@@ -192,8 +189,8 @@ def send_meet_poll(table):
     latest_polls.append(poll)
     try:
         # Update the latest polls in the table
-        table.put_item(
-            Item={
+        db.put_item(
+            TableName='cappello-parlante', Item={
                 'cp_id': 'latest_polls', 'polls': latest_polls
                 }
             )
@@ -203,13 +200,13 @@ def send_meet_poll(table):
 
 
 # Kick users who haven't been seen in the last 1000 updates
-def kick_inactive_users(table):
+def kick_inactive_users(db):
     print("Kicking inactive users")
 
     try:
         # get the voters from the latest polls
-        response = table.get_item(
-            Key={
+        response = db.get_item(
+            TableName='cappello-parlante', Key={
                 'cp_id': 'latest_polls'
                 }
             )
@@ -226,8 +223,8 @@ def kick_inactive_users(table):
 
     # Get the users from the table
     try:
-        response = table.get_item(
-            Key={
+        response = db.get_item(
+            TableName='cappello-parlante', Key={
                 'cp_id': 'users'
                 }
             )
@@ -244,8 +241,8 @@ def kick_inactive_users(table):
             users.remove(user)
     try:
         # Delete the users in the table
-        table.put_item(
-            Item={
+        db.put_item(
+            TableName='cappello-parlante', Item={
                 'cp_id': 'users', 'users': users
                 }
             )
@@ -254,13 +251,12 @@ def kick_inactive_users(table):
         return
 
 
-
-def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
+def add_new_users_to_table(updates: List[Dict[str, Any]], db: Any) -> None:
     print("Adding new users to the table")
     try:
         # Get the users from the table
-        response = table.get_item(
-            Key={
+        response = db.get_item(
+            TableName='cappello-parlante', Key={
                 'cp_id': 'users'
                 }
             )
@@ -276,8 +272,8 @@ def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
             users.append(update['message']['from']['id'])
     try:
         # Update the users in the table
-        table.put_item(
-            Item={
+        db.put_item(
+            TableName='cappello-parlante', Item={
                 'cp_id': 'users', 'users': users
                 }
             )
@@ -328,4 +324,3 @@ def kick_chat_member(user_id):
     except Exception as e:
         print(f"Failed while kicking chat member {e}")
         return
-
