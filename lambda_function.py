@@ -28,11 +28,14 @@ def main():
 
     try:
         # Initialize the DynamoDB client
-        db = boto3.client('dynamodb', region_name=AWS_REGION_CP)
+        session = boto3.Session(
+            region_name=AWS_REGION_CP
+            )
+        # Now you can use this session to create service clients or resources
+        dynamodb = session.resource('dynamodb')
 
         # Get a reference to the 'cappello-parlante' table
-        table = db.Table('cappello-parlante')
-
+        table = dynamodb.Table('cappello-parlante')
     except Exception as e:
         print(f"Failed while initializing db {e}")
         return
