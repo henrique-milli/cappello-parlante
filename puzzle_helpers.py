@@ -117,7 +117,7 @@ def send_daily_puzzle(puzzle):
     save_puzzle_png(puzzle)
 
     # Send the final position as an image to the Telegram group
-    send_image([f'{constants.TEMP_PATH}/temp.png'], get_puzzle_caption(puzzle))
+    send_image(f'{constants.TEMP_PATH}/temp.png', get_puzzle_caption(puzzle))
 
 
 # def send_solution_gif(puzzle):
