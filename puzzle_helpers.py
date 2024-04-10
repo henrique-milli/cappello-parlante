@@ -122,7 +122,11 @@ def send_solution_gif(puzzle):
 
 
 def convert_svg_to_png(svg_content, output_path):
-    with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
-        temp_file.write(svg_content)
+    try:
+        with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
+            temp_file.write(svg_content)
+    except Exception as e:
+        print(f"Error writing SVG to file: {e}")
+        return
 
     subprocess.run([f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path])
