@@ -1,3 +1,18 @@
+def print_directory_contents(path):
+    for child in os.listdir(path):
+        child_path = os.path.join(path, child)
+        if os.path.isdir(child_path):
+            print(f'Directory: {child_path}')
+            print_directory_contents(child_path)
+        else:
+            print(f'File: {child_path}')
+
+print("Printing /opt directory contents:")
+print_directory_contents('/opt')
+
+print("Printing / directory contents:")
+print_directory_contents('/')
+
 import json
 import os
 from datetime import datetime
@@ -14,12 +29,6 @@ from puzzle_helpers import (
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
-
-    print("Printing /opt directory contents:")
-    print_directory_contents('/opt')
-
-    print("Printing / directory contents:")
-    print_directory_contents('/')
 
     main()
     return {
@@ -310,12 +319,4 @@ def manual_send_puzzle():
 
     puzzle_routine(table)
 
-def print_directory_contents(path):
-    for child in os.listdir(path):
-        child_path = os.path.join(path, child)
-        if os.path.isdir(child_path):
-            print(f'Directory: {child_path}')
-            print_directory_contents(child_path)
-        else:
-            print(f'File: {child_path}')
 ######### Testing functions
