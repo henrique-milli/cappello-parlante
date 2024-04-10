@@ -4,26 +4,22 @@ import os
 import chess
 import chess.pgn
 import chess.svg
-import imageio
 import requests
-from wand.image import Image as WandImage
+import subprocess
 
+import constants
 from bot_helpers import send_image
 
 
 def save_puzzle_png(puzzle):
-    # Get the final position of the game
+    # Get game
     game = get_game(puzzle)
 
+    # Get final position SVG
     final_position_svg = get_final_position_svg(game)
 
-    # Convert SVG to PNG using Wand
-    with WandImage(blob=final_position_svg.encode(), format='svg') as img:
-        png_image = img.make_blob('png')
-
-    # Save PNG to a temporary file
-    with open('temp.png', 'wb') as temp_file:
-        temp_file.write(png_image)
+    # Convert SVG to PNG
+    convert_svg_to_png(final_position_svg, 'temp.png')
 
 
 def get_final_position_svg(game):
@@ -48,11 +44,7 @@ def save_soution_pngs(puzzle):
     svgs = get_solution_svgs(puzzle)
 
     for i, svg in enumerate(svgs):
-        with WandImage(blob=svg.encode(), format='svg') as img:
-            png_image = img.make_blob('png')
-
-        with open(f'temp_{i}.png', 'wb') as temp_file:
-            temp_file.write(png_image)
+        convert_svg_to_png(svg, f'temp_{i}.png')
 
 
 def get_solution_svgs(puzzle):
@@ -77,11 +69,11 @@ def create_gif_from_pngs(png_prefix, gif_name, duration):
     # Get all the PNG images
     images = sorted([img for img in os.listdir() if img.startswith(png_prefix) and img.endswith(".png")])
 
-    # Read the images into a list
-    frames = [imageio.imread(img) for img in images]
+    # Calculate the delay for ImageMagick (in ticks)
+    delay = int(duration * 100)
 
-    # Create a GIF from the images
-    imageio.mimsave(gif_name, frames, 'GIF', duration=duration)
+    # Create a GIF from the images using ImageMagick's convert utility
+    subprocess.run([f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images, gif_name])
 
 
 def get_daily_puzzle():
@@ -127,3 +119,10 @@ def send_solution_gif(puzzle):
 
     # Send the GIF to the Telegram group
     send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
+
+
+def convert_svg_to_png(svg_content, output_path):
+    with open('temp.svg', 'w') as temp_file:
+        temp_file.write(svg_content)
+
+    subprocess.run([f"{constants.CONVERT_PATH}", "temp.svg", output_path])
