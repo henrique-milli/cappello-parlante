@@ -294,6 +294,3 @@ def is_first_run_today(table):
                 }
             )
         return True
-
-
-send_solution(get_daily_puzzle())
