@@ -19,7 +19,7 @@ def save_puzzle_png(puzzle):
     final_position_svg = get_final_position_svg(game)
 
     # Convert SVG to PNG
-    convert_svg_to_png(final_position_svg, 'temp.png')
+    convert_svg_to_png(final_position_svg, '/tmp/temp.png')
 
 
 def get_final_position_svg(game):
@@ -44,7 +44,7 @@ def save_soution_pngs(puzzle):
     svgs = get_solution_svgs(puzzle)
 
     for i, svg in enumerate(svgs):
-        convert_svg_to_png(svg, f'temp_{i}.png')
+        convert_svg_to_png(svg, f'/tmp/temp_{i}.png')
 
 
 def get_solution_svgs(puzzle):
@@ -107,7 +107,7 @@ def send_daily_puzzle(puzzle):
     save_puzzle_png(puzzle)
 
     # Send the final position as an image to the Telegram group
-    send_image('temp.png', get_puzzle_caption(puzzle))
+    send_image('/tmp/temp.png', get_puzzle_caption(puzzle))
 
 
 def send_solution_gif(puzzle):
@@ -115,14 +115,14 @@ def send_solution_gif(puzzle):
     save_soution_pngs(puzzle)
 
     # Create a GIF from the PNGs
-    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
+    create_gif_from_pngs('/tmp/temp_', 'solution.gif', duration=3)
 
     # Send the GIF to the Telegram group
     send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
 
 
 def convert_svg_to_png(svg_content, output_path):
-    with open('temp.svg', 'w') as temp_file:
+    with open('/tmp/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
-    subprocess.run([f"{constants.CONVERT_PATH}", "temp.svg", output_path])
+    subprocess.run([f"{constants.CONVERT_PATH}", "/tmp/temp.svg", output_path])
