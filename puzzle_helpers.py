@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import subprocess
 
@@ -125,4 +126,21 @@ def convert_svg_to_png(svg_content, output_path):
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
-    subprocess.run([f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path])
+    convert_result = subprocess.run([f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path])
+
+    # Call the log_diagnostic_data function
+    log_diagnostic_data(svg_content, output_path, convert_result)
+
+
+def log_diagnostic_data(svg_content, output_path, convert_result):
+    # Set up logging
+    logging.basicConfig(filename='diagnostic.log', level=logging.INFO)
+
+    # Log the SVG content
+    logging.info(f'SVG Content: {svg_content}')
+
+    # Log the output path
+    logging.info(f'Output Path: {output_path}')
+
+    # Log the result of the convert command
+    logging.info(f'Convert Result: {convert_result}')
