@@ -1,21 +1,4 @@
-import os
-def print_directory_contents(path):
-    for child in os.listdir(path):
-        child_path = os.path.join(path, child)
-        if os.path.isdir(child_path):
-            print(f'Directory: {child_path}')
-            print_directory_contents(child_path)
-        else:
-            print(f'File: {child_path}')
-
-print("Printing /opt directory contents:")
-print_directory_contents('/opt')
-
-print("Printing / directory contents:")
-print_directory_contents('/')
-
 import json
-
 from datetime import datetime
 
 import boto3
