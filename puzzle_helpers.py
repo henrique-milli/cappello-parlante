@@ -127,18 +127,15 @@ def send_solution_gif(puzzle):
 
 
 def convert_svg_to_png(svg_content, output_path):
-    # Policy diagnostics
-    pol = subprocess.run(["convert", "-list", "policy"], capture_output=True, text=True)
-    print(pol.stdout)
-    ver = subprocess.run(["convert", "--version"], capture_output=True, text=True)
-    print(ver.stdout)
-    srvg = subprocess.run(["rsvg-convert" "--version"], capture_output=True, text=True)
-    print(srvg.stdout)
 
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
-    result = subprocess.run([f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path], capture_output=True, text=True)
+    result = subprocess.run(
+        [f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path],
+        capture_output=True,
+        text=True
+        )
 
     if result.returncode != 0:
         raise Exception(f"Convert command failed with error code {result.returncode}: {result.stderr}")
