@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 import boto3
@@ -9,6 +10,8 @@ from bot_helpers import get_updates, send_message, kick_chat_member
 from puzzle_helpers import (
     get_daily_puzzle, send_daily_puzzle, send_solution_gif,
     )
+
+os.environ["PATH"] += os.pathsep + "/var/task"
 
 
 def lambda_handler(event, context):
