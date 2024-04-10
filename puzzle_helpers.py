@@ -8,6 +8,8 @@ import imageio
 import requests
 from wand.image import Image as WandImage
 
+from bot_helpers import send_image
+
 
 def save_puzzle_png(puzzle):
     # Get the final position of the game
@@ -104,3 +106,22 @@ def get_color_to_move(pgn):
 
 def is_white_to_move(pgn):
     return len(pgn.split(' ')) % 2 == 0
+
+
+def send_daily_puzzle(puzzle):
+    # Save the puzzle as an image
+    save_puzzle_png(puzzle)
+
+    # Send the final position as an image to the Telegram group
+    send_image('temp.png', get_puzzle_caption(puzzle))
+
+
+def send_solution_gif(puzzle):
+    # Save the SVGs as PNGs
+    save_soution_pngs(puzzle)
+
+    # Create a GIF from the PNGs
+    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
+
+    # Send the GIF to the Telegram group
+    send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")

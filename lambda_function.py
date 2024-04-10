@@ -1,12 +1,13 @@
 import json
+from datetime import datetime
 
 import boto3
 import requests
 
 import constants
-from bot_helpers import get_updates, send_message, send_image, kick_chat_member
+from bot_helpers import get_updates, send_message, kick_chat_member
 from puzzle_helpers import (
-    get_daily_puzzle, get_puzzle_caption, save_soution_pngs, create_gif_from_pngs, save_puzzle_png,
+    get_daily_puzzle, send_daily_puzzle, send_solution_gif,
     )
 
 
@@ -32,10 +33,13 @@ def main():
 
     run_day_specific_tasks(table, updates)
 
-    run_every_day_tasks(updates, table)
+    run_routine(updates, table)
 
 
 def run_day_specific_tasks(table, updates):
+    # return if already done today
+    if not is_first_run_today(table):
+        return
 
     # Monday
     if constants.TODAY == 0:
@@ -46,9 +50,9 @@ def run_day_specific_tasks(table, updates):
         evaluate_poll(table, updates)
 
 
-def run_every_day_tasks(updates, table):
+def run_routine(updates, table):
     add_new_users_to_table(updates, table)
-
+    puzzle_routine(table)
 
 
 def evaluate_poll(table, updates):
@@ -239,25 +243,47 @@ def add_new_users_to_table(updates, table):
         )
 
 
-def send_daily_puzzle():
-    # Fetch the daily puzzle
+def puzzle_routine(table):
     puzzle = get_daily_puzzle()
 
-    save_puzzle_png(puzzle)
+    # check the last puzzle sent
+    response = table.get_item(
+        Key={
+            'cp_id': 'last_puzzle'
+            }
+        )
 
-    # Send the final position as an image to the Telegram group
-    send_image('temp.png', get_puzzle_caption(puzzle))
+    # if the last puzzle was sent today, send the solution
+    if response['Item']['date'] == datetime.today().date():
+        send_solution_gif(puzzle)
+
+    else:
+        send_daily_puzzle(puzzle)
+        # update the last puzzle sent
+        table.put_item(
+            Item={
+                'cp_id': 'last_puzzle', 'date': datetime.today().date(), 'id': puzzle['puzzle']['id']
+                }
+            )
 
 
-def send_solution_gif():
-    # Fetch the daily puzzle
-    puzzle = get_daily_puzzle()
+def is_first_run_today(table):
+    # get last day specific run
+    response = table.get_item(
+        Key={
+            'cp_id': 'last_run'
+            }
+        )
 
-    # Save the SVGs as PNGs
-    save_soution_pngs(puzzle)
+    # if the last day specific run was today, return True
+    if response['Item']['date'] == datetime.today().date():
+        return False
 
-    # Create a GIF from the PNGs
-    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
-
-    # Send the GIF to the Telegram group
-    send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
+    else:
+        # update the last run date
+        table.put_item(
+            Item={
+                'cp_id': 'last_run', 'date': datetime.today().date()
+                }
+            )
+        return True
