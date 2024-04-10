@@ -67,13 +67,18 @@ def get_solution_svgs(puzzle):
 
 def create_gif_from_pngs(png_prefix, output_name, duration):
     # Get all the PNG images
-    images = sorted([img for img in os.listdir(constants.TEMP_PATH) if img.startswith(png_prefix) and img.endswith(".png")])
+    images = sorted(
+        [img for img in os.listdir(constants.TEMP_PATH) if img.startswith(png_prefix) and img.endswith(".png")]
+        )
 
     # Calculate the delay for ImageMagick (in ticks)
     delay = int(duration * 100)
 
     # Create a GIF from the images using ImageMagick's convert utility
-    subprocess.run([f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images, f'{constants.TEMP_PATH}/{output_name}'])
+    subprocess.run(
+        [f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images,
+         f'{constants.TEMP_PATH}/{output_name}']
+        )
 
 
 def get_daily_puzzle():

@@ -7,7 +7,7 @@ import requests
 import constants
 from bot_helpers import get_updates, send_message, kick_chat_member
 from puzzle_helpers import (
-    get_daily_puzzle, send_daily_puzzle, send_solution_gif, save_puzzle_png, create_gif_from_pngs,
+    get_daily_puzzle, send_daily_puzzle, send_solution_gif,
     )
 
 
@@ -39,6 +39,7 @@ def main():
 
 
 def run_day_specific_tasks(table, updates):
+    print("Running day specific tasks")
     # return if already done today
     if not is_first_run_today(table):
         return
@@ -53,11 +54,13 @@ def run_day_specific_tasks(table, updates):
 
 
 def run_routine(updates, table):
+    print("Running the routine")
     add_new_users_to_table(updates, table)
     puzzle_routine(table)
 
 
 def evaluate_poll(table, updates):
+    print("Evaluating the poll")
     print("Evaluating the latest poll")
 
     # Get the latest polls from the table
@@ -246,6 +249,7 @@ def add_new_users_to_table(updates, table):
 
 
 def puzzle_routine(table):
+    print("Running the puzzle routine")
     puzzle = get_daily_puzzle()
 
     # check the last puzzle sent
@@ -270,6 +274,7 @@ def puzzle_routine(table):
 
 
 def is_first_run_today(table):
+    print("Checking if it's the first run today")
     # get last day specific run
     response = table.get_item(
         Key={

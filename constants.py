@@ -13,3 +13,6 @@ AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID_CP")
 AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")
 CONVERT_PATH = os.getenv("CONVERT_PATH")
 TEMP_PATH = os.getenv("TEMP_PATH")
+
+# Set the MAGICK_CONFIGURE_PATH environment variable
+os.environ['MAGICK_CONFIGURE_PATH'] = os.getcwd()
