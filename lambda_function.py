@@ -289,17 +289,3 @@ def is_first_run_today(table):
                 }
             )
         return True
-
-
-######### Testing functions
-def manual_send_puzzle():
-    # Initialize the DynamoDB table
-    session = boto3.Session(
-        region_name=constants.AWS_REGION_CP,
-        aws_access_key_id=constants.AWS_ACCESS_KEY_ID_CP,
-        aws_secret_access_key=constants.AWS_SECRET_ACCESS_KEY_CP
-        )
-
-    table = session.resource('dynamodb').Table('cappello-parlante')
-
-    puzzle_routine(table)  ######### Testing functions
