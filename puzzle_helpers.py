@@ -1,6 +1,5 @@
 import io
-import os
-import subprocess
+import json
 
 import chess
 import chess.pgn
@@ -40,11 +39,17 @@ def get_puzzle_caption(puzzle):
 """
 
 
-def save_soution_pngs(puzzle):
-    svgs = get_solution_svgs(puzzle)
+# def save_soution_pngs(puzzle):
+#     svgs = get_solution_svgs(puzzle)
+#
+#     for i, svg in enumerate(svgs):
+#         convert_svg_to_png(svg, f'{constants.TEMP_PATH}/temp_{i}.png')
 
-    for i, svg in enumerate(svgs):
-        convert_svg_to_png(svg, f'{constants.TEMP_PATH}/temp_{i}.png')
+
+def save_solution_final_position_png(puzzle):
+    svg = get_solution_svgs(puzzle)[-1]
+
+    convert_svg_to_png(svg, f'{constants.TEMP_PATH}/temp.png')
 
 
 def get_solution_svgs(puzzle):
@@ -65,20 +70,20 @@ def get_solution_svgs(puzzle):
     return svgs
 
 
-def create_gif_from_pngs(png_prefix, output_name, duration):
-    # Get all the PNG images
-    images = sorted(
-        [img for img in os.listdir(constants.TEMP_PATH) if img.startswith(png_prefix) and img.endswith(".png")]
-        )
-
-    # Calculate the delay for ImageMagick (in ticks)
-    delay = int(duration * 100)
-
-    # Create a GIF from the images using ImageMagick's convert utility
-    subprocess.run(
-        [f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images,
-         f'{constants.TEMP_PATH}/{output_name}']
-        )
+# def create_gif_from_pngs(png_prefix, output_name, duration):
+#     # Get all the PNG images
+#     images = sorted(
+#         [img for img in os.listdir(constants.TEMP_PATH) if img.startswith(png_prefix) and img.endswith(".png")]
+#         )
+#
+#     # Calculate the delay for ImageMagick (in ticks)
+#     delay = int(duration * 100)
+#
+#     # Create a GIF from the images using ImageMagick's convert utility
+#     subprocess.run(
+#         [f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images,
+#          f'{constants.TEMP_PATH}/{output_name}']
+#         )
 
 
 def get_daily_puzzle():
@@ -112,30 +117,67 @@ def send_daily_puzzle(puzzle):
     save_puzzle_png(puzzle)
 
     # Send the final position as an image to the Telegram group
-    send_image(f'{constants.TEMP_PATH}/temp.png', get_puzzle_caption(puzzle))
+    send_image([f'{constants.TEMP_PATH}/temp.png'], get_puzzle_caption(puzzle))
 
 
-def send_solution_gif(puzzle):
+# def send_solution_gif(puzzle):
+#     # Save the SVGs as PNGs
+#     save_soution_pngs(puzzle)
+#
+#     # Create a GIF from the PNGs
+#     create_gif_from_pngs('temp_', 'solution.gif', duration=3)
+#
+#     # Send the GIF to the Telegram group
+#     send_image(f'{constants.TEMP_PATH}/solution.gif', "Ecco la soluzione del puzzle di oggi!")
+
+def send_solution(puzzle):
     # Save the SVGs as PNGs
-    save_soution_pngs(puzzle)
+    save_solution_final_position_png(puzzle)
 
-    # Create a GIF from the PNGs
-    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
+    # Get the solution text
+    solution_text = convert_uci_to_human(puzzle['puzzle']['solution'])
 
-    # Send the GIF to the Telegram group
-    send_image(f'{constants.TEMP_PATH}/solution.gif', "Ecco la soluzione del puzzle di oggi!")
+    # Send the final position as an image to the Telegram group
+    send_image(f'{constants.TEMP_PATH}/temp.png', f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
+
+
+def convert_uci_to_human(uci_moves):
+    human_moves = ""
+    for uci_move in uci_moves:
+        move = chess.Move.from_uci(uci_move)
+        human_moves += str(move) + " "
+    return human_moves
 
 
 def convert_svg_to_png(svg_content, output_path):
-
+    # Write the SVG content to a temporary file
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
-    result = subprocess.run(
-        [f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path],
-        capture_output=True,
-        text=True
+    # Define the instructions for the PSPDFKit API
+    instructions = {
+        'parts': [{
+            'file': 'document'
+            }], 'output': {
+            'type': 'image', 'format': 'png', 'dpi': 500
+            }
+        }
+
+    # Make the API request
+    response = requests.request(
+        'POST', 'https://api.pspdfkit.com/build', headers={
+            'Authorization': f'Bearer {constants.PSPDFKIT_API_KEY}'
+            }, files={
+            'document': open(f'{constants.TEMP_PATH}/temp.svg', 'rb')
+            }, data={
+            'instructions': json.dumps(instructions)
+            }, stream=True
         )
 
-    if result.returncode != 0:
-        raise Exception(f"Convert command failed with error code {result.returncode}: {result.stderr}")
+    # If the request was successful, write the response to the output file
+    if response.ok:
+        with open(output_path, 'wb') as fd:
+            for chunk in response.iter_content(chunk_size=8096):
+                fd.write(chunk)
+    else:
+        raise Exception(f"PSPDFKit API request failed with response: {response.text}")
