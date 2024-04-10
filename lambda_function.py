@@ -1,10 +1,15 @@
 import datetime
+import io
 import json
 import os
 from typing import List, Dict, Any
 
 import boto3
+import chess
+import chess.pgn
+import imageio
 import requests
+from wand.image import Image as WandImage
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -257,7 +262,6 @@ def kick_inactive_users(table):
         return
 
 
-
 def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
     print("Adding new users to the table")
     try:
@@ -332,3 +336,127 @@ def kick_chat_member(user_id):
         print(f"Failed while kicking chat member {e}")
         return
 
+
+def get_daily_puzzle():
+    response = requests.get("https://lichess.org/api/puzzle/daily")
+    return response.json()
+
+
+def get_game(puzzle):
+    pgn_text = puzzle['game']['pgn']
+    pgn_io = io.StringIO(pgn_text)
+    return chess.pgn.read_game(pgn_io)
+
+
+def get_final_position(game):
+    board = game.end().board()
+    return chess.svg.board(board=board)
+
+
+def get_solution_svgs(puzzle):
+    game = get_game(puzzle)
+
+    solution = puzzle['puzzle']['solution']
+
+    svgs = []
+    board = game.end().board()
+    for move in solution:
+        try:
+            board.push_uci(move)
+            svgs.append(chess.svg.board(board=board))
+        except chess.IllegalMoveError:
+            print(f"Illegal move: {move}")
+            continue
+
+    return svgs
+
+
+def save_soution_pngs(svgs):
+    for i, svg in enumerate(svgs):
+        with WandImage(blob=svg.encode(), format='svg') as img:
+            png_image = img.make_blob('png')
+
+        with open(f'temp_{i}.png', 'wb') as temp_file:
+            temp_file.write(png_image)
+
+
+def create_gif_from_pngs(png_prefix, gif_name, duration):
+    # Get all the PNG images
+    images = sorted([img for img in os.listdir() if img.startswith(png_prefix) and img.endswith(".png")])
+
+    # Read the images into a list
+    frames = [imageio.imread(img) for img in images]
+
+    # Create a GIF from the images
+    imageio.mimsave(gif_name, frames, 'GIF', duration=duration)
+
+
+def send_daily_puzzle():
+    # Fetch the daily puzzle
+    puzzle = get_daily_puzzle()
+
+    # Get the final position of the game
+    game = get_game(puzzle)
+    final_position_svg = get_final_position(game)
+
+    # Convert SVG to PNG using Wand
+    with WandImage(blob=final_position_svg.encode(), format='svg') as img:
+        png_image = img.make_blob('png')
+
+    # Save PNG to a temporary file
+    with open('temp.png', 'wb') as temp_file:
+        temp_file.write(png_image)
+
+    # Send the final position as an image to the Telegram group
+    send_image('temp.png', get_puzzle_caption(puzzle))
+
+
+def send_solution_gif():
+    # Fetch the daily puzzle
+    puzzle = get_daily_puzzle()
+
+    # Get the solution SVGs
+    svgs = get_solution_svgs(puzzle)
+
+    # Save the SVGs as PNGs
+    save_soution_pngs(svgs)
+
+    # Create a GIF from the PNGs
+    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
+
+    # Send the GIF to the Telegram group
+    send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
+
+
+def send_image(image_path, caption):
+    with open(image_path, 'rb') as image_file:
+        files = {'photo': image_file}
+        data = {'chat_id': CHAT_ID, 'caption': caption}
+        response = requests.post(f"{BOT_BASE_URL}/sendPhoto", files=files, data=data)
+        return response.json()
+
+
+def get_puzzle_caption(puzzle):
+    if puzzle['players'] is None:
+        return f"Riesci a trovare la mossa migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?"
+    p1 = puzzle['players'][0]
+    p2 = puzzle['players'][1]
+    return f"""
+    Questa partita {puzzle['game']['perf']['name']} è stata giocata da {p1['name']} ({get_color_name(p1['color'])} - {p1['rating']}) e {p2['name']} ({get_color_name(p2['color'])} - {p2['rating']}).
+    Riesci a trovare la moss migliore per il {get_color_name()}?
+"""
+
+
+def is_white_to_move(pgn):
+    return len(pgn.split(' ')) % 2 == 0
+
+
+def get_color_to_move(pgn):
+    return "white" if is_white_to_move(pgn) else "black"
+
+
+def get_color_name(string):
+    if string == "white":
+        return "bianco"
+    else:
+        return "nero"
