@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 import boto3
@@ -13,8 +14,10 @@ from puzzle_helpers import (
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
+    print(os.environ['MAGICK_HOME'])
 
     main()
+
     return {
         'statusCode': 200, 'body': 'OK'
         }
