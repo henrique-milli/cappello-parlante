@@ -278,14 +278,14 @@ def is_first_run_today(table):
         )
 
     # if the last day specific run was today, return True
-    if response['Item']['date'] == datetime.today().date():
+    if response['Item']['date'] == datetime.today().date().isoformat():
         return False
 
     else:
         # update the last run date
         table.put_item(
             Item={
-                'cp_id': 'last_run', 'date': datetime.today().date()
+                'cp_id': 'last_run', 'date': datetime.today().date().isoformat()
                 }
             )
         return True
