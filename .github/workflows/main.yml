@@ -31,12 +31,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CP }}
         aws-region: eu-central-1
 
-    - name: Download and extract ImageMagick binaries
-      run: |
-        git clone https://github.com/serverlesspub/imagemagick-aws-lambda-2.git
-        cd imagemagick-aws-lambda-2
-        make all
-        cp -r result ../
 
     - name: Prepare deployment package
       run: |
