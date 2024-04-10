@@ -1,23 +1,13 @@
-import datetime
-import io
 import json
-import os
-from typing import List, Dict, Any
 
 import boto3
-import chess
-import chess.pgn
-import imageio
 import requests
-from wand.image import Image as WandImage
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-PLAY_ALLOWED_DAYS = os.getenv("PLAY_ALLOWED_DAYS").split(',')
-MIN_PLAYERS_FOR_MEETUP = int(os.getenv("MIN_PLAYERS_FOR_MEETUP"))
-LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
-AWS_REGION_CP = os.getenv("AWS_REGION_CP")
-BOT_BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+import constants
+from bot_helpers import get_updates, send_message, send_image, kick_chat_member
+from puzzle_helpers import (
+    get_daily_puzzle, get_puzzle_caption, save_soution_pngs, create_gif_from_pngs, save_puzzle_png,
+    )
 
 
 def lambda_handler(event, context):
@@ -31,57 +21,39 @@ def lambda_handler(event, context):
 def main():
     print("Starting the main function")
 
-    try:
-        # Initialize the DynamoDB client
-        session = boto3.Session(
-            region_name=AWS_REGION_CP
-            )
-        # Now you can use this session to create service clients or resources
-        dynamodb = session.resource('dynamodb')
+    # Initialize the DynamoDB table
+    session = boto3.Session(
+        region_name=constants.AWS_REGION_CP
+        )
 
-        # Get a reference to the 'cappello-parlante' table
-        table = dynamodb.Table('cappello-parlante')
-    except Exception as e:
-        print(f"Failed while initializing db {e}")
-        return
+    table = session.resource('dynamodb').Table('cappello-parlante')
 
-    try:
-        # Get the updates
-        updates = get_updates()
-    except Exception as e:
-        print(f"Failed while getting updates {e}")
-        return
+    updates = get_updates()
 
-    try:
-        # Add new users to the table
-        add_new_users_to_table(updates, table)
-    except Exception as e:
-        print(f"Failed while adding new users to the table {e}")
-        return
+    run_day_specific_tasks(table, updates)
 
-    today = datetime.datetime.today().weekday()
-
-    try:
-        # Evaluate the latest poll if it's thursday
-        if today == 3:
-            evaluate_poll(table, updates)
-    except Exception as e:
-        print(f"Failed while evaluating the latest poll {e}")
-        return
-
-    try:
-        # Send a new poll if it's monday
-        if today == 0:
-            send_meet_poll(table)
-            kick_inactive_users(table)
-    except Exception as e:
-        print(f"Failed while sending the meet poll {e}")
-        return
+    run_every_day_tasks(updates, table)
 
 
-# Evaluate the latest poll
+def run_day_specific_tasks(table, updates):
+
+    # Monday
+    if constants.TODAY == 0:
+        send_meet_poll(table)
+        kick_inactive_users(table)
+    # Thursday
+    if constants.TODAY == 3:
+        evaluate_poll(table, updates)
+
+
+def run_every_day_tasks(updates, table):
+    add_new_users_to_table(updates, table)
+
+
+
 def evaluate_poll(table, updates):
     print("Evaluating the latest poll")
+
     # Get the latest polls from the table
     response = table.get_item(
         Key={
@@ -110,7 +82,7 @@ def evaluate_poll(table, updates):
 
     # send a message with the selected options
     for i, option in enumerate(poll_options):
-        if poll_results[i].voter_count >= MIN_PLAYERS_FOR_MEETUP:
+        if poll_results[i].voter_count >= constants.MIN_PLAYERS_FOR_MEETUP:
             send_message(
                 text=f"Questa settimana si gioca il '{option}' con {poll_results[i].voter_count} amici."
                 )
@@ -137,16 +109,15 @@ def evaluate_poll(table, updates):
         )
 
 
-# Poll asking users to vote which days they want to meet up
 def send_meet_poll(table):
     print("Sending the meet poll")
     try:
         response = requests.post(
-            f"{BOT_BASE_URL}/sendPoll", data=json.dumps(
+            f"{constants.BOT_BASE_URL}/sendPoll", data=json.dumps(
                 {
-                    "chat_id": CHAT_ID,
+                    "chat_id": constants.CHAT_ID,
                     "question": "Questa settimana quando giochiamo?",
-                    "options": json.dumps(PLAY_ALLOWED_DAYS),
+                    "options": json.dumps(constants.PLAY_ALLOWED_DAYS),
                     "is_anonymous": False,
                     "allows_multiple_answers": True
                     }
@@ -164,66 +135,53 @@ def send_meet_poll(table):
     poll = {
         'id': poll_id, 'voters': []
         }
-    try:
-        # Get the latest polls from the table
-        response = table.get_item(
-            Key={
-                'cp_id': 'latest_polls'
-                }
-            )
-    except Exception as e:
-        print(f"Failed while getting latest polls from the table {e}")
-        return
+
+    # Get the latest polls from the table
+    response = table.get_item(
+        Key={
+            'cp_id': 'latest_polls'
+            }
+        )
 
     latest_polls = response['Item']['polls']
 
     # If the number of stored polls is equal to MAX_LATEST_POLL, delete the oldest poll
-    if len(latest_polls) >= LATEST_POLLS_SIZE:
+    if len(latest_polls) >= constants.LATEST_POLLS_SIZE:
         oldest_poll = latest_polls.pop(0)
         table.delete_item(
             Key={
                 'cp_id': oldest_poll['id']
                 }
             )
-    try:
-        # Store the poll object in the table
-        table.put_item(
-            Item={
-                'cp_id': poll_id, 'poll': poll
-                }
-            )
-    except Exception as e:
-        print(f"Failed while storing the poll object in the table {e}")
-        return
+
+    # Store the poll object in the table
+    table.put_item(
+        Item={
+            'cp_id': poll_id, 'poll': poll
+            }
+        )
 
     # Add the new poll to the latest polls
     latest_polls.append(poll)
-    try:
-        # Update the latest polls in the table
-        table.put_item(
-            Item={
-                'cp_id': 'latest_polls', 'polls': latest_polls
-                }
-            )
-    except Exception as e:
-        print(f"Failed while updating latest polls in the table {e}")
-        return
+
+    # Update the latest polls in the table
+    table.put_item(
+        Item={
+            'cp_id': 'latest_polls', 'polls': latest_polls
+            }
+        )
 
 
 # Kick users who haven't been seen in the last 1000 updates
 def kick_inactive_users(table):
     print("Kicking inactive users")
 
-    try:
-        # get the voters from the latest polls
-        response = table.get_item(
-            Key={
-                'cp_id': 'latest_polls'
-                }
-            )
-    except Exception as e:
-        print(f"Failed while getting latest polls from the table {e}")
-        return
+    # get the voters from the latest polls
+    response = table.get_item(
+        Key={
+            'cp_id': 'latest_polls'
+            }
+        )
 
     latest_polls = response['Item']['polls']
 
@@ -233,15 +191,12 @@ def kick_inactive_users(table):
         voters += poll['voters']
 
     # Get the users from the table
-    try:
-        response = table.get_item(
-            Key={
-                'cp_id': 'users'
-                }
-            )
-    except Exception as e:
-        print(f"Failed while getting users from the table {e}")
-        return
+
+    response = table.get_item(
+        Key={
+            'cp_id': 'users'
+            }
+        )
 
     users = response['Item']['users']
 
@@ -250,30 +205,24 @@ def kick_inactive_users(table):
         if user not in voters:
             kick_chat_member(user['id'])
             users.remove(user)
-    try:
-        # Delete the users in the table
-        table.put_item(
-            Item={
-                'cp_id': 'users', 'users': users
-                }
-            )
-    except Exception as e:
-        print(f"Failed while updating users in the table {e}")
-        return
+
+    # Delete the users in the table
+    table.put_item(
+        Item={
+            'cp_id': 'users', 'users': users
+            }
+        )
 
 
-def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
+def add_new_users_to_table(updates, table):
     print("Adding new users to the table")
-    try:
-        # Get the users from the table
-        response = table.get_item(
-            Key={
-                'cp_id': 'users'
-                }
-            )
-    except Exception as e:
-        print(f"Failed while getting users from the table {e}")
-        return
+
+    # Get the users from the table
+    response = table.get_item(
+        Key={
+            'cp_id': 'users'
+            }
+        )
 
     users = response['Item']['users']
 
@@ -281,131 +230,20 @@ def add_new_users_to_table(updates: List[Dict[str, Any]], table: Any) -> None:
     for update in updates:
         if update['message']['from']['id'] not in users:
             users.append(update['message']['from']['id'])
-    try:
-        # Update the users in the table
-        table.put_item(
-            Item={
-                'cp_id': 'users', 'users': users
-                }
-            )
-    except Exception as e:
-        print(f"Failed while updating users in the table {e}")
-        return
 
-
-def get_updates() -> List[Dict[str, Any]]:
-    print("Getting updates")
-    try:
-        response = requests.get(
-            f"{BOT_BASE_URL}/getUpdates", params={'offset': -1}
-            )
-        updates = response.json()['result']
-    except Exception as e:
-        print(f"Failed while getting updates {e}")
-        return []
-
-    return updates
-
-
-def send_message(text):
-    print("Sending message")
-    try:
-        response = requests.post(
-            f"{BOT_BASE_URL}/sendMessage", data=json.dumps(
-                {
-                    "chat_id": CHAT_ID, "text": text
-                    }
-                ), headers={'Content-Type': 'application/json'}
-            )
-    except Exception as e:
-        print(f"Failed while sending message {e}")
-        return
-
-
-def kick_chat_member(user_id):
-    print("Kicking chat member")
-    try:
-        response = requests.post(
-            f"{BOT_BASE_URL}/kickChatMember", data=json.dumps(
-                {
-                    "chat_id": CHAT_ID, "user_id": user_id
-                    }
-                ), headers={'Content-Type': 'application/json'}
-            )
-    except Exception as e:
-        print(f"Failed while kicking chat member {e}")
-        return
-
-
-def get_daily_puzzle():
-    response = requests.get("https://lichess.org/api/puzzle/daily")
-    return response.json()
-
-
-def get_game(puzzle):
-    pgn_text = puzzle['game']['pgn']
-    pgn_io = io.StringIO(pgn_text)
-    return chess.pgn.read_game(pgn_io)
-
-
-def get_final_position(game):
-    board = game.end().board()
-    return chess.svg.board(board=board)
-
-
-def get_solution_svgs(puzzle):
-    game = get_game(puzzle)
-
-    solution = puzzle['puzzle']['solution']
-
-    svgs = []
-    board = game.end().board()
-    for move in solution:
-        try:
-            board.push_uci(move)
-            svgs.append(chess.svg.board(board=board))
-        except chess.IllegalMoveError:
-            print(f"Illegal move: {move}")
-            continue
-
-    return svgs
-
-
-def save_soution_pngs(svgs):
-    for i, svg in enumerate(svgs):
-        with WandImage(blob=svg.encode(), format='svg') as img:
-            png_image = img.make_blob('png')
-
-        with open(f'temp_{i}.png', 'wb') as temp_file:
-            temp_file.write(png_image)
-
-
-def create_gif_from_pngs(png_prefix, gif_name, duration):
-    # Get all the PNG images
-    images = sorted([img for img in os.listdir() if img.startswith(png_prefix) and img.endswith(".png")])
-
-    # Read the images into a list
-    frames = [imageio.imread(img) for img in images]
-
-    # Create a GIF from the images
-    imageio.mimsave(gif_name, frames, 'GIF', duration=duration)
+    # Update the users in the table
+    table.put_item(
+        Item={
+            'cp_id': 'users', 'users': users
+            }
+        )
 
 
 def send_daily_puzzle():
     # Fetch the daily puzzle
     puzzle = get_daily_puzzle()
 
-    # Get the final position of the game
-    game = get_game(puzzle)
-    final_position_svg = get_final_position(game)
-
-    # Convert SVG to PNG using Wand
-    with WandImage(blob=final_position_svg.encode(), format='svg') as img:
-        png_image = img.make_blob('png')
-
-    # Save PNG to a temporary file
-    with open('temp.png', 'wb') as temp_file:
-        temp_file.write(png_image)
+    save_puzzle_png(puzzle)
 
     # Send the final position as an image to the Telegram group
     send_image('temp.png', get_puzzle_caption(puzzle))
@@ -415,48 +253,11 @@ def send_solution_gif():
     # Fetch the daily puzzle
     puzzle = get_daily_puzzle()
 
-    # Get the solution SVGs
-    svgs = get_solution_svgs(puzzle)
-
     # Save the SVGs as PNGs
-    save_soution_pngs(svgs)
+    save_soution_pngs(puzzle)
 
     # Create a GIF from the PNGs
     create_gif_from_pngs('temp_', 'solution.gif', duration=3)
 
     # Send the GIF to the Telegram group
     send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
-
-
-def send_image(image_path, caption):
-    with open(image_path, 'rb') as image_file:
-        files = {'photo': image_file}
-        data = {'chat_id': CHAT_ID, 'caption': caption}
-        response = requests.post(f"{BOT_BASE_URL}/sendPhoto", files=files, data=data)
-        return response.json()
-
-
-def get_puzzle_caption(puzzle):
-    if puzzle['players'] is None:
-        return f"Riesci a trovare la mossa migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?"
-    p1 = puzzle['players'][0]
-    p2 = puzzle['players'][1]
-    return f"""
-    Questa partita {puzzle['game']['perf']['name']} è stata giocata da {p1['name']} ({get_color_name(p1['color'])} - {p1['rating']}) e {p2['name']} ({get_color_name(p2['color'])} - {p2['rating']}).
-    Riesci a trovare la moss migliore per il {get_color_name()}?
-"""
-
-
-def is_white_to_move(pgn):
-    return len(pgn.split(' ')) % 2 == 0
-
-
-def get_color_to_move(pgn):
-    return "white" if is_white_to_move(pgn) else "black"
-
-
-def get_color_name(string):
-    if string == "white":
-        return "bianco"
-    else:
-        return "nero"
