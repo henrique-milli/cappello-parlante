@@ -128,6 +128,12 @@ def send_solution_gif(puzzle):
 
 def convert_svg_to_png(svg_content, output_path):
 
+    # Run the convert command with the -list policy option
+    result = subprocess.run(["convert", "-list", "policy"], capture_output=True, text=True)
+
+    # Print the output
+    print(result.stdout)
+
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
