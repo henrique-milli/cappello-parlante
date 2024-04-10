@@ -260,7 +260,7 @@ def puzzle_routine(table):
         )
 
     # if the last puzzle was sent today, send the solution
-    if response['Item']['date'] == datetime.today().date():
+    if response['Item']['date'] == datetime.today().date().isoformat():
         send_solution(puzzle)
 
     else:
@@ -268,7 +268,7 @@ def puzzle_routine(table):
         # update the last puzzle sent
         table.put_item(
             Item={
-                'cp_id': 'last_puzzle', 'date': datetime.today().date(), 'id': puzzle['puzzle']['id']
+                'cp_id': 'last_puzzle', 'date': datetime.today().date().isoformat(), 'id': puzzle['puzzle']['id']
                 }
             )
 
