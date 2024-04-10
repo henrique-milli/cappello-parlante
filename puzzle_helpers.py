@@ -122,6 +122,7 @@ def send_solution_gif(puzzle):
 
 
 def convert_svg_to_png(svg_content, output_path):
+    print(svg_content)
     try:
         with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
             temp_file.write(svg_content)
