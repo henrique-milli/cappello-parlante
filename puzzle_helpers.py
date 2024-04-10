@@ -1,11 +1,11 @@
 import io
 import os
+import subprocess
 
 import chess
 import chess.pgn
 import chess.svg
 import requests
-import subprocess
 
 import constants
 from bot_helpers import send_image
@@ -19,7 +19,7 @@ def save_puzzle_png(puzzle):
     final_position_svg = get_final_position_svg(game)
 
     # Convert SVG to PNG
-    convert_svg_to_png(final_position_svg, '/tmp/temp.png')
+    convert_svg_to_png(final_position_svg, f'{constants.TEMP_PATH}/temp.png')
 
 
 def get_final_position_svg(game):
@@ -44,7 +44,7 @@ def save_soution_pngs(puzzle):
     svgs = get_solution_svgs(puzzle)
 
     for i, svg in enumerate(svgs):
-        convert_svg_to_png(svg, f'/tmp/temp_{i}.png')
+        convert_svg_to_png(svg, f'{constants.TEMP_PATH}/temp_{i}.png')
 
 
 def get_solution_svgs(puzzle):
@@ -65,15 +65,15 @@ def get_solution_svgs(puzzle):
     return svgs
 
 
-def create_gif_from_pngs(png_prefix, gif_name, duration):
+def create_gif_from_pngs(png_prefix, output_name, duration):
     # Get all the PNG images
-    images = sorted([img for img in os.listdir() if img.startswith(png_prefix) and img.endswith(".png")])
+    images = sorted([img for img in os.listdir(constants.TEMP_PATH) if img.startswith(png_prefix) and img.endswith(".png")])
 
     # Calculate the delay for ImageMagick (in ticks)
     delay = int(duration * 100)
 
     # Create a GIF from the images using ImageMagick's convert utility
-    subprocess.run([f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images, gif_name])
+    subprocess.run([f"{constants.CONVERT_PATH}", "-delay", str(delay), "-loop", "0", *images, f'{constants.TEMP_PATH}/{output_name}'])
 
 
 def get_daily_puzzle():
@@ -107,7 +107,7 @@ def send_daily_puzzle(puzzle):
     save_puzzle_png(puzzle)
 
     # Send the final position as an image to the Telegram group
-    send_image('/tmp/temp.png', get_puzzle_caption(puzzle))
+    send_image(f'{constants.TEMP_PATH}/temp.png', get_puzzle_caption(puzzle))
 
 
 def send_solution_gif(puzzle):
@@ -115,14 +115,14 @@ def send_solution_gif(puzzle):
     save_soution_pngs(puzzle)
 
     # Create a GIF from the PNGs
-    create_gif_from_pngs('/tmp/temp_', 'solution.gif', duration=3)
+    create_gif_from_pngs('temp_', 'solution.gif', duration=3)
 
     # Send the GIF to the Telegram group
-    send_image('solution.gif', "Ecco la soluzione del puzzle di oggi!")
+    send_image(f'{constants.TEMP_PATH}/solution.gif', "Ecco la soluzione del puzzle di oggi!")
 
 
 def convert_svg_to_png(svg_content, output_path):
-    with open('/tmp/temp.svg', 'w') as temp_file:
+    with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
 
-    subprocess.run([f"{constants.CONVERT_PATH}", "/tmp/temp.svg", output_path])
+    subprocess.run([f"{constants.CONVERT_PATH}", f"{constants.TEMP_PATH}/temp.svg", output_path])

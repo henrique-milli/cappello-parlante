@@ -7,7 +7,7 @@ import requests
 import constants
 from bot_helpers import get_updates, send_message, kick_chat_member
 from puzzle_helpers import (
-    get_daily_puzzle, send_daily_puzzle, send_solution_gif,
+    get_daily_puzzle, send_daily_puzzle, send_solution_gif, save_puzzle_png, create_gif_from_pngs,
     )
 
 
