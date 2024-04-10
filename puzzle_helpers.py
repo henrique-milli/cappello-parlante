@@ -129,8 +129,10 @@ def send_solution_gif(puzzle):
 def convert_svg_to_png(svg_content, output_path):
 
     # Policy diagnostics
-    result = subprocess.run(["convert", "-list", "policy"], capture_output=True, text=True)
-    print(result.stdout)
+    pol = subprocess.run(["convert", "-list", "policy"], capture_output=True, text=True)
+    print(pol.stdout)
+    ver = subprocess.run(["convert", "--version"], capture_output=True, text=True)
+    print(ver.stdout)
 
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
