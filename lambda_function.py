@@ -1,11 +1,11 @@
 import json
-import os
 from datetime import datetime
 
 import boto3
 import requests
 
 import constants
+print(f"magick path: {constants.MAGICK_HOME}")
 from bot_helpers import get_updates, send_message, kick_chat_member
 from puzzle_helpers import (
     get_daily_puzzle, send_daily_puzzle, send_solution_gif,
@@ -14,7 +14,7 @@ from puzzle_helpers import (
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
-    print(f"magick path: {constants.MAGICK_HOME}")
+
 
     main()
 
