@@ -132,6 +132,8 @@ def convert_svg_to_png(svg_content, output_path):
     print(pol.stdout)
     ver = subprocess.run(["convert", "--version"], capture_output=True, text=True)
     print(ver.stdout)
+    srvg = subprocess.run(["rsvg-convert" "--version"], capture_output=True, text=True)
+    print(srvg.stdout)
 
     with open(f'{constants.TEMP_PATH}/temp.svg', 'w') as temp_file:
         temp_file.write(svg_content)
