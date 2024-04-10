@@ -14,7 +14,7 @@ from puzzle_helpers import (
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
-    print(os.environ['MAGICK_HOME'])
+    print(f"magick path: {os.environ['MAGICK_HOME']}")
 
     main()
 
