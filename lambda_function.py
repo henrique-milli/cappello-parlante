@@ -10,6 +10,9 @@ from puzzle_helpers import (
     get_daily_puzzle, send_daily_puzzle, send_solution_gif,
     )
 
+import os
+
+os.environ["PATH"] += os.pathsep + "/var/task"
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
