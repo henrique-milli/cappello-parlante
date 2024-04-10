@@ -34,8 +34,8 @@ def get_puzzle_caption(puzzle):
     p2 = players[1]
     return f"""
     Questa partita {puzzle['game']['perf']['name']} è stata giocata da {p1['name']} ({get_color_name(p1['color'])} - {p1['rating']}) e {p2['name']} ({get_color_name(p2['color'])} - {p2['rating']}).
-    Riesci a trovare le mosse migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?
-    Non fare spoiler! La soluzione verrà pubblicata più tardi.
+Riesci a trovare le mosse migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?
+Non fare spoiler! La soluzione verrà pubblicata più tardi.
 """
 
 
