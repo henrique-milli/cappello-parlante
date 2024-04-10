@@ -8,5 +8,5 @@
     stealth NMTOKEN #IMPLIED value CDATA #IMPLIED>
 ]>
 <policymap>
-  <policy domain="Undefined" rights="all"/>
+  <policy domain="All" rights="all"/>
 </policymap>
