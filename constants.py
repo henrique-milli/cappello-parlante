@@ -9,3 +9,5 @@ LATEST_POLLS_SIZE = int(os.getenv("LATEST_POLLS_SIZE"))
 AWS_REGION_CP = os.getenv("AWS_REGION_CP")
 BOT_BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 TODAY = datetime.today().weekday()
+AWS_ACCESS_KEY_ID_CP = os.getenv("AWS_ACCESS_KEY_ID_CP")
+AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")

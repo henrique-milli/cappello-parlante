@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 import boto3
@@ -13,6 +14,13 @@ from puzzle_helpers import (
 
 def lambda_handler(event, context):
     print("Starting the lambda function")
+
+    print("Printing /opt directory contents:")
+    print_directory_contents('/opt')
+
+    print("Printing / directory contents:")
+    print_directory_contents('/')
+
     main()
     return {
         'statusCode': 200, 'body': 'OK'
@@ -287,3 +295,27 @@ def is_first_run_today(table):
                 }
             )
         return True
+
+
+######### Testing functions
+def manual_send_puzzle():
+    # Initialize the DynamoDB table
+    session = boto3.Session(
+        region_name=constants.AWS_REGION_CP,
+        aws_access_key_id=constants.AWS_ACCESS_KEY_ID_CP,
+        aws_secret_access_key=constants.AWS_SECRET_ACCESS_KEY_CP
+        )
+
+    table = session.resource('dynamodb').Table('cappello-parlante')
+
+    puzzle_routine(table)
+
+def print_directory_contents(path):
+    for child in os.listdir(path):
+        child_path = os.path.join(path, child)
+        if os.path.isdir(child_path):
+            print(f'Directory: {child_path}')
+            print_directory_contents(child_path)
+        else:
+            print(f'File: {child_path}')
+######### Testing functions

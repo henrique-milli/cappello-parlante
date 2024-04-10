@@ -32,13 +32,15 @@ def get_final_position_svg(game):
 
 
 def get_puzzle_caption(puzzle):
-    if puzzle['players'] is None:
+    players = puzzle['game']['players']
+    if players is None:
         return f"Riesci a trovare la mossa migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?"
-    p1 = puzzle['players'][0]
-    p2 = puzzle['players'][1]
+    p1 = players[0]
+    p2 = players[1]
     return f"""
     Questa partita {puzzle['game']['perf']['name']} è stata giocata da {p1['name']} ({get_color_name(p1['color'])} - {p1['rating']}) e {p2['name']} ({get_color_name(p2['color'])} - {p2['rating']}).
-    Riesci a trovare la moss migliore per il {get_color_name()}?
+    Riesci a trovare le mosse migliore per il {get_color_name(get_color_to_move(puzzle['game']['pgn']))}?
+    Non fare spoiler! La soluzione verrà pubblicata più tardi.
 """
 
 
