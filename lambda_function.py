@@ -1,3 +1,4 @@
+import os
 def print_directory_contents(path):
     for child in os.listdir(path):
         child_path = os.path.join(path, child)
@@ -14,7 +15,7 @@ print("Printing / directory contents:")
 print_directory_contents('/')
 
 import json
-import os
+
 from datetime import datetime
 
 import boto3
