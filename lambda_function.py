@@ -5,7 +5,7 @@ import boto3
 import requests
 
 import constants
-from bot_helpers import get_updates, send_message, kick_chat_member, handle_updates
+from bot_helpers import get_updates, send_message, handle_updates
 from puzzle_helpers import (
     get_daily_puzzle, send_daily_puzzle, send_solution,
     )
@@ -70,7 +70,7 @@ def evaluate_poll(table, updates):
             }
         )
 
-    latest_poll = response['Item']['polls']
+    latest_poll = response['Item']
 
     count_dict = {}
 
@@ -151,46 +151,10 @@ def send_meet_poll(table):
         )
 
 
-# Kick users who haven't been seen in the last 1000 updates
+# Kick users who haven't been seen in MAX_VACANCY
 def kick_inactive_users(table):
     print("Kicking inactive users")
-
-    # get the voters from the latest polls
-    response = table.get_item(
-        Key={
-            'cp_id': 'latest_poll'
-            }
-        )
-
-    latest_poll = response['Item']['polls']
-
-    voters = []
-
-    for poll in latest_poll:
-        voters += poll['voters']
-
-    # Get the users from the table
-
-    response = table.get_item(
-        Key={
-            'cp_id': 'users'
-            }
-        )
-
-    users = response['Item']['users']
-
-    # Kick users who haven't voted in the latest polls
-    for user in users:
-        if user not in voters:
-            kick_chat_member(user['id'])
-            users.remove(user)
-
-    # Delete the users in the table
-    table.put_item(
-        Item={
-            'cp_id': 'users', 'users': users
-            }
-        )
+    pass
 
 
 def puzzle_routine(table):
