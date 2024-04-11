@@ -7,7 +7,7 @@ import chess.svg
 import requests
 
 import constants
-from bot_helpers import send_image
+from bot_helpers import send_image, send_message
 
 
 def save_puzzle_png(puzzle):
@@ -132,14 +132,15 @@ def send_daily_puzzle(puzzle):
 
 def send_solution(puzzle):
     # Save the SVGs as PNGs
-    save_solution_final_position_png(puzzle)
+    # save_solution_final_position_png(puzzle)
 
     # Get the solution text
     solution_text = convert_uci_to_human(puzzle['puzzle']['solution'])
 
     # Send the final position as an image to the Telegram group
-    send_image(f'{constants.TEMP_PATH}/temp.png', f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
+    # send_image(f'{constants.TEMP_PATH}/temp.png', f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
 
+    send_message(f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
 
 def convert_uci_to_human(uci_moves):
     human_moves = ""
