@@ -46,3 +46,75 @@ def kick_chat_member(user_id):
                 }
             ), headers={'Content-Type': 'application/json'}
         )
+
+
+def handle_updates(updates, table):
+
+    for update in updates:
+        if 'poll_answer' in update:
+            handle_poll_answer(table, update['poll_answer'])
+
+    add_new_users_to_table(updates, table)
+
+
+def handle_poll_answer(table, poll_answer):
+    poll_id = poll_answer['poll_id']
+    user_id = poll_answer['user']['id']
+    options_ids = poll_answer['option_ids']
+
+    # Here you would add your own logic to store these details
+    store_poll_answer(table, poll_id, user_id, options_ids)
+
+
+def store_poll_answer(table, poll_id, user_id, oids):
+    response = table.get_item(
+        Key={
+            'cp_id': 'latest_poll'
+            }
+        )
+
+    if response['Item']['id'] != poll_id:
+        return
+
+    options_ids = response['Item']['options_ids']
+    voters = response['Item']['voters']
+
+    if user_id not in voters:
+        voters.append(user_id)
+
+    for oid in oids:
+        options_ids.append(oid)
+
+
+def add_new_users_to_table(updates, table):
+    print("Adding new users to the table")
+
+    # Get the users from the table
+    response = table.get_item(
+        Key={
+            'cp_id': 'users'
+            }
+        )
+
+    users_ids = response['Item']['users_ids']
+
+    # Add new users to the table
+    for update in updates:
+
+        message = {}
+        if 'message' in update:
+            message = update['message']
+        elif 'edited_message' in update:
+            message = update['edited_message']
+        else:
+            continue
+
+        if message['from']['id'] not in users_ids:
+            users_ids.append(update['message']['from']['id'])
+
+    # Update the users in the table
+    table.put_item(
+        Item={
+            'cp_id': 'users', 'users_ids': users_ids
+            }
+        )

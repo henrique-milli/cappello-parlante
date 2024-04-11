@@ -5,7 +5,7 @@ import boto3
 import requests
 
 import constants
-from bot_helpers import get_updates, send_message, kick_chat_member
+from bot_helpers import get_updates, send_message, kick_chat_member, handle_updates
 from puzzle_helpers import (
     get_daily_puzzle, send_daily_puzzle, send_solution,
     )
@@ -33,6 +33,8 @@ def main():
 
     updates = get_updates()
 
+    handle_updates(updates, table)
+
     run_day_specific_tasks(table, updates)
 
     run_routine(updates, table)
@@ -42,6 +44,7 @@ def run_day_specific_tasks(table, updates):
     print("Running day specific tasks")
     # return if already done today
     if not is_first_run_today(table):
+        print("Already done today")
         return
 
     # Monday
@@ -55,67 +58,34 @@ def run_day_specific_tasks(table, updates):
 
 def run_routine(updates, table):
     print("Running the routine")
-    add_new_users_to_table(updates, table)
     puzzle_routine(table)
 
 
 def evaluate_poll(table, updates):
     print("Evaluating the poll")
-    print("Evaluating the latest poll")
 
-    # Get the latest polls from the table
     response = table.get_item(
         Key={
-            'cp_id': 'latest_polls'
+            'cp_id': 'latest_poll'
             }
         )
 
-    latest_polls = response['Item']['polls']
+    latest_poll = response['Item']['polls']
 
-    # Get the ID of the latest poll
-    latest_poll_id = latest_polls[-1]['id']
+    count_dict = {}
 
-    # Find the latest poll in the updates
-    for update in reversed(updates):
-        if update['poll'] and update['poll']['id'] == latest_poll_id:
-            latest_poll = update.poll
-            break
-    else:
-        return  # No poll found in the updates
+    for i in latest_poll['options_ids']:
+        if i in count_dict:
+            count_dict[i] += 1
+        else:
+            count_dict[i] = 1
 
-    # Get the poll results
-    poll_results = latest_poll.results
-
-    # Get the poll options
-    poll_options = latest_poll.options
-
-    # send a message with the selected options
-    for i, option in enumerate(poll_options):
-        if poll_results[i].voter_count >= constants.MIN_PLAYERS_FOR_MEETUP:
+    for opt, count in count_dict.items():
+        if count >= constants.MIN_PLAYERS_FOR_MEETUP:
             send_message(
-                text=f"Questa settimana si gioca il '{option}' con {poll_results[i].voter_count} amici."
+                f"Questa settimana giochiamo {constants.PLAY_ALLOWED_DAYS[opt]}.\n(Le mie scuse devo tradurre questo codice, Henrique)"
                 )
-
-    # Get the poll object from the table
-    response = table.get_item(
-        Key={
-            'cp_id': latest_poll_id
-            }
-        )
-    poll = response['Item']['poll']
-
-    # Update the voters list in the poll object
-    for result in poll_results:
-        for user in result.voters:
-            if user.id not in poll['voters']:
-                poll['voters'].append(user.id)
-
-    # Store the updated poll object in the table
-    table.put_item(
-        Item={
-            'cp_id': latest_poll_id, 'poll': poll
-            }
-        )
+            break
 
 
 def send_meet_poll(table):
@@ -148,15 +118,15 @@ def send_meet_poll(table):
     # Get the latest polls from the table
     response = table.get_item(
         Key={
-            'cp_id': 'latest_polls'
+            'cp_id': 'latest_poll'
             }
         )
 
-    latest_polls = response['Item']['polls']
+    latest_poll = response['Item']['polls']
 
     # If the number of stored polls is equal to MAX_LATEST_POLL, delete the oldest poll
-    if len(latest_polls) >= constants.LATEST_POLLS_SIZE:
-        oldest_poll = latest_polls.pop(0)
+    if len(latest_poll) >= constants.LATEST_POLLS_SIZE:
+        oldest_poll = latest_poll.pop(0)
         table.delete_item(
             Key={
                 'cp_id': oldest_poll['id']
@@ -171,12 +141,12 @@ def send_meet_poll(table):
         )
 
     # Add the new poll to the latest polls
-    latest_polls.append(poll)
+    latest_poll.append(poll)
 
     # Update the latest polls in the table
     table.put_item(
         Item={
-            'cp_id': 'latest_polls', 'polls': latest_polls
+            'cp_id': 'latest_poll', 'polls': latest_poll
             }
         )
 
@@ -188,15 +158,15 @@ def kick_inactive_users(table):
     # get the voters from the latest polls
     response = table.get_item(
         Key={
-            'cp_id': 'latest_polls'
+            'cp_id': 'latest_poll'
             }
         )
 
-    latest_polls = response['Item']['polls']
+    latest_poll = response['Item']['polls']
 
     voters = []
 
-    for poll in latest_polls:
+    for poll in latest_poll:
         voters += poll['voters']
 
     # Get the users from the table
@@ -223,31 +193,6 @@ def kick_inactive_users(table):
         )
 
 
-def add_new_users_to_table(updates, table):
-    print("Adding new users to the table")
-
-    # Get the users from the table
-    response = table.get_item(
-        Key={
-            'cp_id': 'users'
-            }
-        )
-
-    users = response['Item']['users']
-
-    # Add new users to the table
-    for update in updates:
-        if update['message']['from']['id'] not in users:
-            users.append(update['message']['from']['id'])
-
-    # Update the users in the table
-    table.put_item(
-        Item={
-            'cp_id': 'users', 'users': users
-            }
-        )
-
-
 def puzzle_routine(table):
     print("Running the puzzle routine")
     puzzle = get_daily_puzzle()
@@ -255,7 +200,7 @@ def puzzle_routine(table):
     # check the last puzzle sent
     response = table.get_item(
         Key={
-            'cp_id': 'last_puzzle'
+            'cp_id': 'latest_puzzle'
             }
         )
 
@@ -268,7 +213,7 @@ def puzzle_routine(table):
         # update the last puzzle sent
         table.put_item(
             Item={
-                'cp_id': 'last_puzzle', 'date': datetime.today().date().isoformat(), 'id': puzzle['puzzle']['id']
+                'cp_id': 'latest_puzzle', 'date': datetime.today().date().isoformat(), 'id': puzzle['puzzle']['id']
                 }
             )
 
@@ -278,7 +223,7 @@ def is_first_run_today(table):
     # get last day specific run
     response = table.get_item(
         Key={
-            'cp_id': 'last_run'
+            'cp_id': 'latest_run'
             }
         )
 
@@ -290,7 +235,29 @@ def is_first_run_today(table):
         # update the last run date
         table.put_item(
             Item={
-                'cp_id': 'last_run', 'date': datetime.today().date().isoformat()
+                'cp_id': 'latest_run', 'date': datetime.today().date().isoformat()
                 }
             )
         return True
+
+
+# Use this to test snippets locally
+def local_testing():
+
+    # Initialize the DynamoDB table
+    session = boto3.Session(
+        region_name=constants.AWS_REGION_CP,
+        aws_access_key_id=constants.AWS_ACCESS_KEY_ID_CP,
+        aws_secret_access_key=constants.AWS_SECRET_ACCESS_KEY_CP
+        )
+
+    table = session.resource('dynamodb').Table('cappello-parlante')
+
+    # [{'update_id': 171822184, 'edited_message': {'message_id': 89, 'from': {'id': 853709991, 'is_bot': False, 'first_name': 'Flavio', 'last_name': 'Moccia', 'username': 'flaviomoccia'}, 'chat': {'id': -1002076164562, 'title': 'Circolo della fenice', 'type': 'supergroup'}, 'date': 1712768123, 'edit_date': 1712779068, 'voice': {'duration': 30, 'mime_type': 'audio/ogg', 'file_id': 'AwACAgQAAx0Ce7_B0gADWWYW7zwUZ0ZJUHVpAkS-O5nxfr4wAAIaEgACd8O4UL_4IlQUK2FONAQ', 'file_unique_id': 'AgADGhIAAnfDuFA', 'file_size': 122398}}}]
+    updates = get_updates()
+
+    handle_updates(updates, table)
+
+    run_day_specific_tasks(table, updates)
+
+    run_routine(updates, table)
