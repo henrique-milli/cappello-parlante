@@ -7,7 +7,7 @@ import requests
 import constants
 from bot_helpers import get_updates, send_message, handle_updates
 from puzzle_helpers import (
-    get_daily_puzzle, send_daily_puzzle, send_solution,
+    get_daily_puzzle, send_daily_puzzle, send_solution, get_puzzle,
     )
 
 
@@ -159,7 +159,6 @@ def kick_inactive_users(table):
 
 def puzzle_routine(table):
     print("Running the puzzle routine")
-    puzzle = get_daily_puzzle()
 
     # check the last puzzle sent
     response = table.get_item(
@@ -170,9 +169,11 @@ def puzzle_routine(table):
 
     # if the last puzzle was sent today, send the solution
     if response['Item']['date'] == datetime.today().date().isoformat():
+        puzzle = get_puzzle(response['Item']['id'])
         send_solution(puzzle)
 
     else:
+        puzzle = get_daily_puzzle()
         send_daily_puzzle(puzzle)
         # update the last puzzle sent
         table.put_item(

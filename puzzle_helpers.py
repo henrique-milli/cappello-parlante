@@ -91,6 +91,11 @@ def get_daily_puzzle():
     return response.json()
 
 
+def get_puzzle(id):
+    response = requests.get(f"https://lichess.org/api/puzzle/{id}")
+    return response.json()
+
+
 def get_game(puzzle):
     pgn_text = puzzle['game']['pgn']
     pgn_io = io.StringIO(pgn_text)
@@ -141,6 +146,7 @@ def send_solution(puzzle):
     # send_image(f'{constants.TEMP_PATH}/temp.png', f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
 
     send_message(f"Ecco la soluzione del puzzle di oggi:\n{solution_text}")
+
 
 def convert_uci_to_human(uci_moves):
     human_moves = ""
