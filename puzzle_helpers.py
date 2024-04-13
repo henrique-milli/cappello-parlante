@@ -134,7 +134,7 @@ def get_game(puzzle):
     return chess.pgn.read_game(pgn_io)
 
 
-def convert(input_path, output_path, width, height):
+def convert(input_path, output_path):
     # Convert the paths to absolute paths
     input_path = os.path.abspath(input_path)
     output_path = os.path.abspath(output_path)
@@ -152,8 +152,8 @@ def convert(input_path, output_path, width, height):
     # Define the input parameters that will be passed to the Lambda function
     input_params = {
         "svgData": svg_data,
-        "width": width,
-        "height": height
+        "width": constants.PNG_WIDTH,
+        "height": constants.PNG_HEIGHT
         }
 
     # Invoke the Lambda function

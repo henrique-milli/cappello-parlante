@@ -14,7 +14,8 @@ AWS_SECRET_ACCESS_KEY_CP = os.getenv("AWS_SECRET_ACCESS_KEY_CP")
 CONVERT_EXECUTABLE_PATH = os.getenv("CONVERT_PATH")
 TEMP_PATH = os.getenv("TEMP_PATH")
 GIF_DELAY = os.getenv("GIF_DELAY")
-PNG_SIZE = os.getenv("PNG_SIZE")
+PNG_WIDTH = os.getenv("PNG_WIDTH")
+PNG_HEIGHT = os.getenv("PNG_HEIGHT")
 
 # Constants
 BOT_BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
