@@ -1,7 +1,9 @@
 import io
+import json
 import os
 import subprocess
 
+import boto3
 import chess
 import chess.pgn
 import chess.svg
@@ -132,7 +134,7 @@ def get_game(puzzle):
     return chess.pgn.read_game(pgn_io)
 
 
-def convert(input_path, output_path):
+def convert(input_path, output_path, width, height):
     # Convert the paths to absolute paths
     input_path = os.path.abspath(input_path)
     output_path = os.path.abspath(output_path)
@@ -140,14 +142,36 @@ def convert(input_path, output_path):
     # save an empty output file to ensure it exists
     save_file("", output_path)
 
-    # Run the conversion command
-    result = subprocess.run(
-        [f"{constants.CONVERT_EXECUTABLE_PATH}", input_path, '-resize', constants.PNG_SIZE, output_path]
+    # Create a Lambda client
+    lambda_client = boto3.client('lambda', region_name='eu-central-1')
+
+    # Read the SVG data from the input file
+    with open(input_path, 'r') as f:
+        svg_data = f.read()
+
+    # Define the input parameters that will be passed to the Lambda function
+    input_params = {
+        "svgData": svg_data,
+        "width": width,
+        "height": height
+        }
+
+    # Invoke the Lambda function
+    response = lambda_client.invoke(
+        FunctionName='svg2png-lambda',  # Replace with the name of your Lambda function
+        InvocationType='RequestResponse',
+        Payload=json.dumps(input_params)
         )
 
+    # If you expect a response from the Lambda function, you can read it like this:
+    response_payload = json.loads(response['Payload'].read().decode('utf-8'))
+
+    # Write the response payload (PNG data) to the output file
+    save_file(response_payload, output_path)
+
     # verify the conversion
-    if result.returncode != 0:
-        print(f"Conversion failed: {result}")
+    if not os.path.exists(output_path):
+        print(f"Conversion failed: {response}")
 
 
 def save_file(content, path):
