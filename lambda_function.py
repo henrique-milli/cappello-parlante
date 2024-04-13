@@ -217,12 +217,3 @@ def local_testing():
         )
 
     table = session.resource('dynamodb').Table('cappello-parlante')
-
-    # [{'update_id': 171822184, 'edited_message': {'message_id': 89, 'from': {'id': 853709991, 'is_bot': False, 'first_name': 'Flavio', 'last_name': 'Moccia', 'username': 'flaviomoccia'}, 'chat': {'id': -1002076164562, 'title': 'Circolo della fenice', 'type': 'supergroup'}, 'date': 1712768123, 'edit_date': 1712779068, 'voice': {'duration': 30, 'mime_type': 'audio/ogg', 'file_id': 'AwACAgQAAx0Ce7_B0gADWWYW7zwUZ0ZJUHVpAkS-O5nxfr4wAAIaEgACd8O4UL_4IlQUK2FONAQ', 'file_unique_id': 'AgADGhIAAnfDuFA', 'file_size': 122398}}}]
-    updates = get_updates()
-
-    handle_updates(updates, table)
-
-    run_day_specific_tasks(table, updates)
-
-    run_routine(updates, table)

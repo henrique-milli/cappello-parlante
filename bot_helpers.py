@@ -19,7 +19,7 @@ def get_updates():
 def send_message(text):
     print("Sending message")
 
-    response = requests.post(
+    requests.post(
         f"{constants.BOT_BASE_URL}/sendMessage", data=json.dumps(
             {
                 "chat_id": constants.CHAT_ID, "text": text
@@ -29,6 +29,8 @@ def send_message(text):
 
 
 def send_image(image_path, caption):
+    print("Sending image")
+
     with open(image_path, 'rb') as image_file:
         files = {'photo': image_file}
         data = {'chat_id': constants.CHAT_ID, 'caption': caption}
